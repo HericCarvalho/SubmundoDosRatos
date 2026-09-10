@@ -1,7 +1,7 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:VisualElement name="MenuPrincipal" style="flex-grow: 1;">
         <ui:Label text="Submundo Dos Ratos" name="Titulo" style="-unity-font-style: bold; font-size: 100px; -unity-text-align: middle-center; justify-content: center; align-self: center; align-content: center; top: 15%;"/>
-        <ui:VisualElement name="UI" style="flex-grow: 1; display: flex;">
+        <ui:VisualElement name="UI" style="flex-grow: 1; display: none;">
             <ui:VisualElement name="Botoes" style="flex-grow: 1; margin-top: 100px; margin-right: 100px; margin-bottom: 100px; margin-left: 100px; padding-top: 100px; padding-right: 100px; padding-bottom: 100px; padding-left: 100px; align-items: center; justify-content: space-around; align-content: center; align-self: center; -unity-text-align: middle-center;">
                 <ui:Button text="Modo Historia" name="ModoHistoria" style="align-items: center; justify-content: center; align-self: center; align-content: center; top: 10%; -unity-font-style: bold; font-size: 50px; border-top-width: 4px; border-right-width: 4px; border-bottom-width: 4px; border-left-width: 4px; border-left-color: rgb(0, 0, 0); border-right-color: rgb(0, 0, 0); border-top-color: rgb(0, 0, 0); border-bottom-color: rgb(0, 0, 0); border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px;"/>
                 <ui:Button text="ModoInfinito " name="ModoInfinito" style="align-items: center; justify-content: center; align-self: center; align-content: center; top: 10%; -unity-font-style: bold; font-size: 40px; border-top-width: 4px; border-right-width: 4px; border-bottom-width: 4px; border-left-width: 4px; border-left-color: rgb(0, 0, 0); border-right-color: rgb(0, 0, 0); border-top-color: rgb(0, 0, 0); border-bottom-color: rgb(0, 0, 0); border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px;"/>
@@ -25,6 +25,12 @@
             <ui:Toggle label="Mostrar FPS" name="MostrarFPS" style="font-size: 35px; -unity-font-style: bold; -unity-text-align: middle-center; bottom: -5%;"/>
             <ui:DropdownField label="Resolução" name="MudarResolucao" style="font-size: 35px; -unity-font-style: bold; bottom: -10%;"/>
             <ui:Button text="Voltar" name="Voltar" style="font-size: 30px; align-content: flex-end; align-self: flex-end; justify-content: flex-end; bottom: -15%;"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="UI_Multiplayer" style="flex-grow: 1; justify-content: center; align-self: center; align-content: center; display: none;">
+            <ui:Label text="Multiplayer" name="Nome" style="font-size: 50px; -unity-font-style: italic; -unity-text-align: middle-center; top: -10%;"/>
+            <ui:TextField label="IP" placeholder-text="" name="InputIP" hide-placeholder-on-focus="false" readonly="false" is-delayed="false" auto-correction="false" multiline="false" keyboard-type="Default" vertical-scroller-visibility="AlwaysVisible" style="font-size: 20px; -unity-font-style: bold-and-italic; border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px; top: -5%; background-color: rgb(137, 137, 137);"/>
+            <ui:Button text="Criar&#10;" name="Criar" style="font-size: 30px; -unity-font-style: bold; border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px;"/>
+            <ui:Button text="Entrar&#10;" name="Entrar" style="font-size: 30px; -unity-font-style: bold; border-top-left-radius: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-bottom-left-radius: 10px;"/>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

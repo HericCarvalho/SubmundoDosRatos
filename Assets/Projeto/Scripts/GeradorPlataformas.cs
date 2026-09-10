@@ -42,26 +42,22 @@ public class GeradorPlataformas : MonoBehaviour
 
     private void Start()
     {
-        if (alvoJogador == null)
-        {
-            GameObject playerObj = GameObject.FindWithTag("Player");
-            if (playerObj != null)
-            {
-                alvoJogador = playerObj.transform;
-            }
-            else
-            {
-                Debug.LogError("[GeradorPlataformas] ERRO: Arraste o Jogador para o campo 'Alvo Jogador' ou coloque a Tag 'Player' nele!");
-                return;
-            }
-        }
         if (prefabChaoNeutro == null)
         {
             Debug.LogError("[GeradorPlataformas] ERRO: Voce esqueceu de arrastar o prefab no campo 'Prefab Chao Neutro'!");
             return;
         }
 
-        proximaPosicaoX = alvoJogador.position.x - 10f;
+        BuscarJogadorLider();
+
+        if (alvoJogador != null)
+        {
+            proximaPosicaoX = alvoJogador.position.x - 10f;
+        }
+        else
+        {
+            proximaPosicaoX = -10f;
+        }
 
         for (int i = 0; i < plataformasIniciaisSeguras; i++)
         {
@@ -71,6 +67,8 @@ public class GeradorPlataformas : MonoBehaviour
 
     private void Update()
     {
+        BuscarJogadorLider();
+
         if (alvoJogador == null) return;
 
         while (proximaPosicaoX < alvoJogador.position.x + distanciaVisaoFrente)
@@ -79,6 +77,46 @@ public class GeradorPlataformas : MonoBehaviour
         }
 
         RemoverPlataformasAtras();
+    }
+
+    private void BuscarJogadorLider()
+    {
+        float maiorX = -99999f;
+        Transform jogadorLider = null;
+
+        JogadorNetwork[] jogadoresNetwork = Object.FindObjectsByType<JogadorNetwork>(FindObjectsSortMode.None);
+        if (jogadoresNetwork.Length > 0)
+        {
+            foreach (var j in jogadoresNetwork)
+            {
+                if (j.transform.position.x > maiorX)
+                {
+                    maiorX = j.transform.position.x;
+                    jogadorLider = j.transform;
+                }
+            }
+        }
+        else
+        {
+            JogadorRunner jogadorSingle = Object.FindAnyObjectByType<JogadorRunner>();
+            if (jogadorSingle != null)
+            {
+                jogadorLider = jogadorSingle.transform;
+            }
+            else
+            {
+                GameObject playerObj = GameObject.FindWithTag("Player");
+                if (playerObj != null)
+                {
+                    jogadorLider = playerObj.transform;
+                }
+            }
+        }
+
+        if (jogadorLider != null)
+        {
+            alvoJogador = jogadorLider;
+        }
     }
 
     private void ProcessarProximoElemento()

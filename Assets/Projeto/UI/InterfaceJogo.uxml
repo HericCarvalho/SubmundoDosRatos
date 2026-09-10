@@ -1,3 +1,5 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:Label text="" name="TextoFPS" style="-unity-font-style: bold; font-size: 22px;"/>
+    <ui:VisualElement name="UI_Gameplay" style="flex-grow: 1; -unity-text-align: middle-center; white-space: nowrap; justify-content: center;">
+        <ui:Label text="&#10;" name="Iniciar" style="font-size: 60px; -unity-font-style: bold-and-italic; align-self: center; align-content: center; justify-content: center; align-items: center; top: -10%;"/>
+    </ui:VisualElement>
 </ui:UXML>

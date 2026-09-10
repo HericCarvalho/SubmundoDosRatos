@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
-public class MenuController : MonoBehaviour
+public class MenuControlador : MonoBehaviour
 {
     [Header("UI Document")]
     [SerializeField] private UIDocument uiDocument;
@@ -16,15 +16,15 @@ public class MenuController : MonoBehaviour
     [Header("Cenas")]
     [SerializeField] private string nomeCenaModoInfinito = "CenaModoInfinito";
 
-    private VisualElement menuPrincipal;
     private VisualElement containerBotoesPrincipais;
     private VisualElement panelModoInfinito;
+    private VisualElement panelMultiplayer; // Adicionado
     private VisualElement panelOpcoes;
-    private VisualElement panelSavesHistoria;
     private VisualElement panelCreditos;
 
     private Button btnModoHistoria;
     private Button btnModoInfinito;
+    private Button btnMultiplayer; // Adicionado
     private Button btnOpcoes;
     private Button btnCreditos;
     private Button btnSair;
@@ -36,8 +36,8 @@ public class MenuController : MonoBehaviour
     private Button btnVoltarOpcoes;
 
     private Button btnSinglePlayer;
-    private Button btnMultiplayer;
     private Button btnVoltarInfinito;
+    private Button btnVoltarMultiplayer; // Adicionado caso crie um botão voltar
     private Label labelPontuacaoSingle;
     private Label labelPontuacaoMulti;
 
@@ -58,19 +58,18 @@ public class MenuController : MonoBehaviour
 
     private void MapearElementos(VisualElement root)
     {
-        menuPrincipal = root.Q<VisualElement>("MenuPrincipal");
-
         containerBotoesPrincipais = root.Q<VisualElement>("UI");
         if (containerBotoesPrincipais == null)
             containerBotoesPrincipais = root.Q<VisualElement>("Botoes");
 
         panelModoInfinito = root.Q<VisualElement>("UI_ModoInfinito");
+        panelMultiplayer = root.Q<VisualElement>("UI_Multiplayer"); // Mapeia o painel da imagem
         panelOpcoes = root.Q<VisualElement>("UI_Opcoes");
-        panelSavesHistoria = root.Q<VisualElement>("UI_SavesHistoria");
         panelCreditos = root.Q<VisualElement>("UI_Creditos");
 
         btnModoHistoria = root.Q<Button>("ModoHistoria");
         btnModoInfinito = root.Q<Button>("ModoInfinito");
+        btnMultiplayer = root.Q<Button>("Multiplayer"); // Botão do menu principal
         btnOpcoes = root.Q<Button>("Opcoes");
         btnCreditos = root.Q<Button>("Creditos");
         btnSair = root.Q<Button>("Sair");
@@ -81,7 +80,6 @@ public class MenuController : MonoBehaviour
         dropdownResolucao = root.Q<DropdownField>("MudarResolucao");
 
         btnSinglePlayer = root.Q<Button>("SinglePlayer");
-        btnMultiplayer = root.Q<Button>("Multiplayer");
         labelPontuacaoSingle = root.Q<Label>("PontuacaoSingle");
         labelPontuacaoMulti = root.Q<Label>("PontuacaoMulti");
 
@@ -90,18 +88,24 @@ public class MenuController : MonoBehaviour
 
         if (panelModoInfinito != null)
             btnVoltarInfinito = panelModoInfinito.Q<Button>("Voltar");
+
+        if (panelMultiplayer != null)
+            btnVoltarMultiplayer = panelMultiplayer.Q<Button>("Voltar");
     }
 
     private void ConfigurarBotoes()
     {
         if (btnModoHistoria != null)
-            btnModoHistoria.clicked += () => AbrirSubPainel(panelSavesHistoria);
+            btnModoHistoria.clicked += () => { };
 
         if (btnModoInfinito != null)
             btnModoInfinito.clicked += () => {
                 AtualizarPontuacoesInfinito();
                 AbrirSubPainel(panelModoInfinito);
             };
+
+        if (btnMultiplayer != null)
+            btnMultiplayer.clicked += () => AbrirSubPainel(panelMultiplayer);
 
         if (btnOpcoes != null)
             btnOpcoes.clicked += () => AbrirSubPainel(panelOpcoes);
@@ -114,15 +118,15 @@ public class MenuController : MonoBehaviour
 
         if (btnVoltarOpcoes != null)
             btnVoltarOpcoes.clicked += VoltarParaBotoesPrincipais;
+
+        if (btnVoltarMultiplayer != null)
+            btnVoltarMultiplayer.clicked += VoltarParaBotoesPrincipais;
     }
 
     private void ConfigurarModoInfinito()
     {
         if (btnSinglePlayer != null)
             btnSinglePlayer.clicked += IniciarSinglePlayerInfinito;
-
-        if (btnMultiplayer != null)
-            btnMultiplayer.clicked += AbrirMenuMultiplayer;
 
         if (btnVoltarInfinito != null)
             btnVoltarInfinito.clicked += VoltarParaBotoesPrincipais;
@@ -134,10 +138,10 @@ public class MenuController : MonoBehaviour
         int recordeMulti = PlayerPrefs.GetInt("RecordeMulti", 0);
 
         if (labelPontuacaoSingle != null)
-            labelPontuacaoSingle.text = $"Recorde: {recordeSingle}m";
+            labelPontuacaoSingle.text = $"Recorde Solo: {recordeSingle}m";
 
         if (labelPontuacaoMulti != null)
-            labelPontuacaoMulti.text = $"Recorde: {recordeMulti}m";
+            labelPontuacaoMulti.text = $"Recorde Coop: {recordeMulti}m";
     }
 
     private void IniciarSinglePlayerInfinito()
@@ -146,19 +150,14 @@ public class MenuController : MonoBehaviour
         SceneManager.LoadScene(nomeCenaModoInfinito);
     }
 
-    private void AbrirMenuMultiplayer()
-    {
-        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
-    }
-
     private void AbrirSubPainel(VisualElement subPainelAlvo)
     {
         if (containerBotoesPrincipais != null)
             containerBotoesPrincipais.style.display = DisplayStyle.None;
 
         OcultarElemento(panelModoInfinito);
+        OcultarElemento(panelMultiplayer);
         OcultarElemento(panelOpcoes);
-        OcultarElemento(panelSavesHistoria);
         OcultarElemento(panelCreditos);
 
         if (subPainelAlvo != null)
@@ -170,8 +169,8 @@ public class MenuController : MonoBehaviour
     private void VoltarParaBotoesPrincipais()
     {
         OcultarElemento(panelModoInfinito);
+        OcultarElemento(panelMultiplayer);
         OcultarElemento(panelOpcoes);
-        OcultarElemento(panelSavesHistoria);
         OcultarElemento(panelCreditos);
 
         if (containerBotoesPrincipais != null)
