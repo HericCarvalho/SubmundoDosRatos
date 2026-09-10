@@ -1,42 +1,36 @@
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class ContadorFPSUI : MonoBehaviour
 {
-    [Header("Configuracoes")]
-    [SerializeField] private float tempoAtualizacao = 0.5f;
-
-    private Label labelFPS;
-    private int quantidadeQuadros = 0;
-    private float acumuladorTempo = 0f;
+    private float tempoAcumulado = 0f;
+    private int quadrosContados = 0;
     private float fpsAtual = 0f;
-
-    private void OnEnable()
-    {
-        UIDocument documentoUI = GetComponent<UIDocument>();
-
-        if (documentoUI != null)
-        {
-            labelFPS = documentoUI.rootVisualElement.Q<Label>("TextoFPS");
-        }
-    }
 
     private void Update()
     {
-        acumuladorTempo += Time.unscaledDeltaTime;
-        quantidadeQuadros++;
+        bool mostrar = PlayerPrefs.GetInt("MostrarFPS", 0) == 1;
+        if (!mostrar) return;
 
-        if (acumuladorTempo >= tempoAtualizacao)
+        tempoAcumulado += Time.unscaledDeltaTime;
+        quadrosContados++;
+
+        if (tempoAcumulado >= 0.5f)
         {
-            fpsAtual = quantidadeQuadros / acumuladorTempo;
-
-            if (labelFPS != null)
-            {
-                labelFPS.text = "FPS: " + Mathf.RoundToInt(fpsAtual);
-            }
-
-            acumuladorTempo = 0f;
-            quantidadeQuadros = 0;
+            fpsAtual = quadrosContados / tempoAcumulado;
+            tempoAcumulado = 0f;
+            quadrosContados = 0;
         }
+    }
+
+    private void OnGUI()
+    {
+        bool mostrar = PlayerPrefs.GetInt("MostrarFPS", 0) == 1;
+        if (!mostrar) return;
+
+        GUIStyle estilo = new GUIStyle();
+        estilo.fontSize = 20;
+        estilo.normal.textColor = Color.yellow;
+
+        GUI.Label(new Rect(10, 10, 150, 30), $"FPS: {Mathf.Ceil(fpsAtual)}", estilo);
     }
 }
