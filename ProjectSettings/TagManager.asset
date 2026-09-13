@@ -5,11 +5,12 @@ TagManager:
   serializedVersion: 3
   tags:
   - Obstaculo
+  - Checkpoint
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - "Ch\xE3o"
   - Water
   - UI
   - Jogador

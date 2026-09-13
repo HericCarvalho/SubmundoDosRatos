@@ -63,13 +63,13 @@ public class MenuControlador : MonoBehaviour
             containerBotoesPrincipais = root.Q<VisualElement>("Botoes");
 
         panelModoInfinito = root.Q<VisualElement>("UI_ModoInfinito");
-        panelMultiplayer = root.Q<VisualElement>("UI_Multiplayer"); // Mapeia o painel da imagem
+        panelMultiplayer = root.Q<VisualElement>("UI_Multiplayer");
         panelOpcoes = root.Q<VisualElement>("UI_Opcoes");
         panelCreditos = root.Q<VisualElement>("UI_Creditos");
 
         btnModoHistoria = root.Q<Button>("ModoHistoria");
         btnModoInfinito = root.Q<Button>("ModoInfinito");
-        btnMultiplayer = root.Q<Button>("Multiplayer"); // Botão do menu principal
+        btnMultiplayer = root.Q<Button>("Multiplayer");
         btnOpcoes = root.Q<Button>("Opcoes");
         btnCreditos = root.Q<Button>("Creditos");
         btnSair = root.Q<Button>("Sair");

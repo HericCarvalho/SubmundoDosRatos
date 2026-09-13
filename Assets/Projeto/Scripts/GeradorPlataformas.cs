@@ -1,12 +1,12 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
-public class GeradorPlataformas : MonoBehaviour
+public class GeradorPlataformas : NetworkBehaviour
 {
     public enum TipoCorObstaculo { CorA, CorB, BrancoIntrasponivel }
 
     [Header("Prefab do Chao")]
-    [Tooltip("Prefab do chao")]
     [SerializeField] private GameObject prefabChaoNeutro;
 
     [Header("Cores dos Obstaculos")]
@@ -15,7 +15,6 @@ public class GeradorPlataformas : MonoBehaviour
     [SerializeField] private Color corBranca = Color.white;
 
     [Header("Modelos de Obstaculos")]
-    [Tooltip("Adicione aqui seus formatos")]
     [SerializeField] private List<GameObject> listaModelosObstaculos;
 
     [Header("Configuracoes de Visao")]
@@ -35,30 +34,29 @@ public class GeradorPlataformas : MonoBehaviour
     [SerializeField] private float alturaMinimaOffset = 0f;
     [SerializeField] private float alturaMaximaOffset = 2.5f;
 
-    private float proximaPosicaoX = 0f;
+    private float proximaPosicaoX = -10f;
     private List<GameObject> plataformasAtivas = new List<GameObject>();
     private int plataformasIniciaisSeguras = 5;
     private bool ultimoObstaculoExigiuPulo = false;
 
     private void Start()
     {
-        if (prefabChaoNeutro == null)
+        if (NetworkManager.Singleton == null)
         {
-            Debug.LogError("[GeradorPlataformas] ERRO: Voce esqueceu de arrastar o prefab no campo 'Prefab Chao Neutro'!");
-            return;
+            InicializarGerador();
         }
+    }
 
-        BuscarJogadorLider();
-
-        if (alvoJogador != null)
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
         {
-            proximaPosicaoX = alvoJogador.position.x - 10f;
+            InicializarGerador();
         }
-        else
-        {
-            proximaPosicaoX = -10f;
-        }
+    }
 
+    private void InicializarGerador()
+    {
         for (int i = 0; i < plataformasIniciaisSeguras; i++)
         {
             GerarChaoSemObstaculo();
@@ -67,6 +65,8 @@ public class GeradorPlataformas : MonoBehaviour
 
     private void Update()
     {
+        if (NetworkManager.Singleton != null && !IsServer) return;
+
         BuscarJogadorLider();
 
         if (alvoJogador == null) return;
@@ -106,17 +106,11 @@ public class GeradorPlataformas : MonoBehaviour
             else
             {
                 GameObject playerObj = GameObject.FindWithTag("Player");
-                if (playerObj != null)
-                {
-                    jogadorLider = playerObj.transform;
-                }
+                if (playerObj != null) jogadorLider = playerObj.transform;
             }
         }
 
-        if (jogadorLider != null)
-        {
-            alvoJogador = jogadorLider;
-        }
+        if (jogadorLider != null) alvoJogador = jogadorLider;
     }
 
     private void ProcessarProximoElemento()
@@ -139,6 +133,7 @@ public class GeradorPlataformas : MonoBehaviour
         Vector3 posicao = new Vector3(proximaPosicaoX, 0f, 0f);
         GameObject novoChao = Instantiate(prefabChaoNeutro, posicao, Quaternion.identity);
 
+        SpawnarObjetoRede(novoChao);
         plataformasAtivas.Add(novoChao);
         proximaPosicaoX += tamanhoPadraoX;
     }
@@ -148,6 +143,7 @@ public class GeradorPlataformas : MonoBehaviour
         Vector3 posicao = new Vector3(proximaPosicaoX, 0f, 0f);
         GameObject novoChao = Instantiate(prefabChaoNeutro, posicao, Quaternion.identity);
 
+        SpawnarObjetoRede(novoChao);
         GerarObstaculoGarantido(posicao, novoChao.transform);
 
         plataformasAtivas.Add(novoChao);
@@ -156,16 +152,13 @@ public class GeradorPlataformas : MonoBehaviour
 
     private void GerarObstaculoGarantido(Vector3 posicaoPlataforma, Transform paiPlataforma)
     {
-        if (listaModelosObstaculos == null || listaModelosObstaculos.Count == 0) return;
-        if (ultimoObstaculoExigiuPulo) return;
+        if (listaModelosObstaculos == null || listaModelosObstaculos.Count == 0 || ultimoObstaculoExigiuPulo) return;
 
         int indiceModelo = Random.Range(0, listaModelosObstaculos.Count);
         GameObject modeloSorteado = listaModelosObstaculos[indiceModelo];
-
         if (modeloSorteado == null) return;
 
         TipoCorObstaculo corEscolhida;
-
         if (Random.value < chanceObstaculoSerBranco)
         {
             corEscolhida = TipoCorObstaculo.BrancoIntrasponivel;
@@ -177,11 +170,12 @@ public class GeradorPlataformas : MonoBehaviour
         }
 
         float offsetAltura = usarAlturasAleatorias ? Random.Range(alturaMinimaOffset, alturaMaximaOffset) : 0f;
-
         Vector3 posicaoObstaculo = new Vector3(posicaoPlataforma.x, posicaoPlataforma.y + 1f + offsetAltura, posicaoPlataforma.z);
+
         GameObject novoObstaculo = Instantiate(modeloSorteado, posicaoObstaculo, Quaternion.identity);
         novoObstaculo.transform.SetParent(paiPlataforma);
 
+        SpawnarObjetoRede(novoObstaculo);
         AplicarPropriedadesAoObstaculo(novoObstaculo, corEscolhida);
     }
 
@@ -209,33 +203,50 @@ public class GeradorPlataformas : MonoBehaviour
         int layerID = LayerMask.NameToLayer(nomeLayer);
 
         Renderer[] renderizadores = obstaculo.GetComponentsInChildren<Renderer>();
-        foreach (Renderer rend in renderizadores)
-        {
-            rend.material.color = corFinal;
-        }
+        foreach (Renderer rend in renderizadores) rend.material.color = corFinal;
 
         Transform[] todosFilhos = obstaculo.GetComponentsInChildren<Transform>();
         foreach (Transform t in todosFilhos)
         {
             t.gameObject.tag = "Obstaculo";
-            if (layerID != -1)
-            {
-                t.gameObject.layer = layerID;
-            }
+            if (layerID != -1) t.gameObject.layer = layerID;
         }
     }
 
     private void RemoverPlataformasAtras()
     {
-        if (plataformasAtivas.Count > 0)
+        if (plataformasAtivas.Count <= plataformasIniciaisSeguras || alvoJogador == null) return;
+
+        GameObject plataformaAntiga = plataformasAtivas[plataformasIniciaisSeguras];
+        if (plataformaAntiga != null)
         {
-            GameObject plataformaMaisAntiga = plataformasAtivas[0];
-            float fimDaPlataformaX = plataformaMaisAntiga.transform.position.x + tamanhoPadraoX;
+            float fimDaPlataformaX = plataformaAntiga.transform.position.x + tamanhoPadraoX;
 
             if (fimDaPlataformaX < alvoJogador.position.x - distanciaSegurancaAtras)
             {
-                plataformasAtivas.RemoveAt(0);
-                Destroy(plataformaMaisAntiga);
+                plataformasAtivas.RemoveAt(plataformasIniciaisSeguras);
+
+                if (plataformaAntiga.TryGetComponent<NetworkObject>(out var netObj))
+                {
+                    if (NetworkManager.Singleton != null && IsServer && netObj.IsSpawned)
+                    {
+                        netObj.Despawn(true);
+                        return;
+                    }
+                }
+
+                Destroy(plataformaAntiga);
+            }
+        }
+    }
+
+    private void SpawnarObjetoRede(GameObject obj)
+    {
+        if (obj.TryGetComponent<NetworkObject>(out var netObj))
+        {
+            if (NetworkManager.Singleton != null && IsServer && !netObj.IsSpawned)
+            {
+                netObj.Spawn(true);
             }
         }
     }

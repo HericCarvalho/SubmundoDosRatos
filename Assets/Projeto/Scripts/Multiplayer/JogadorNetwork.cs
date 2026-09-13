@@ -1,7 +1,7 @@
 using Unity.Cinemachine;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class JogadorNetwork : NetworkBehaviour
 {
@@ -9,8 +9,10 @@ public class JogadorNetwork : NetworkBehaviour
     [SerializeField] private float forcaPulo = 10f;
     [SerializeField] private float velocidadeFrente = 8f;
 
-    [Header("Configuracao de Morte")]
+    [Header("Configuracao de Morte e Respawn")]
     [SerializeField] private float limiteAlturaQueda = -10f;
+
+    private Vector3 pontoCheckpointAtual;
 
     [Header("Configuracoes de Cores")]
     [SerializeField] private Color corA = Color.cyan;
@@ -33,6 +35,12 @@ public class JogadorNetwork : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        float deslocamentoZ = (OwnerClientId % 2 == 0) ? -0.5f : 0.5f;
+        transform.position += new Vector3(0f, 0f, deslocamentoZ);
+        transform.rotation = Quaternion.identity;
+
+        pontoCheckpointAtual = transform.position;
+
         DefinirCorJogador(true);
 
         if (IsOwner)
@@ -43,14 +51,14 @@ public class JogadorNetwork : NetworkBehaviour
                 vcam.Follow = transform;
                 vcam.LookAt = transform;
             }
+
+            AtualizarTodosOsFantasmas();
         }
         else
         {
             AplicarEfeitoFantasma();
-            IgnorarColisaoAdversario();
         }
     }
-
 
     private void OnEnable()
     {
@@ -64,15 +72,20 @@ public class JogadorNetwork : NetworkBehaviour
         GerenciadorInputs.AoApertarTrocarCor -= AlternarCor;
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
+        if (!IsOwner) return;
+
         if (GameMultiplayer.Instance != null && !GameMultiplayer.Instance.JogoIniciado.Value)
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            ZerarVelocidade();
             return;
         }
 
-        rb.linearVelocity = new Vector3(velocidadeFrente, rb.linearVelocity.y, 0f);
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.linearVelocity = new Vector3(velocidadeFrente, rb.linearVelocity.y, 0f);
+        }
     }
 
     private void LateUpdate()
@@ -91,7 +104,10 @@ public class JogadorNetwork : NetworkBehaviour
 
         if (estaNoChao)
         {
-            rb.AddForce(Vector3.up * forcaPulo, ForceMode.Impulse);
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.AddForce(Vector3.up * forcaPulo, ForceMode.Impulse);
+            }
             estaNoChao = false;
         }
     }
@@ -119,7 +135,12 @@ public class JogadorNetwork : NetworkBehaviour
             renderizadorMesh.material.color = corBase;
         }
 
-        gameObject.layer = LayerMask.NameToLayer(estaNaCorA ? "CorA" : "CorB");
+        string nomeLayer = estaNaCorA ? "CorA" : "CorB";
+        int layerID = LayerMask.NameToLayer(nomeLayer);
+        if (layerID != -1)
+        {
+            gameObject.layer = layerID;
+        }
     }
 
     private void AplicarEfeitoFantasma()
@@ -142,21 +163,15 @@ public class JogadorNetwork : NetworkBehaviour
             mat.color = corAtual;
         }
     }
-    private void IgnorarColisaoAdversario()
-    {
-        Collider meuCollider = GetComponent<Collider>();
-        if (meuCollider == null) return;
 
-        JogadorNetwork[] outrosJogadores = Object.FindObjectsByType<JogadorNetwork>(FindObjectsSortMode.None);
-        foreach (var jogador in outrosJogadores)
+    private void AtualizarTodosOsFantasmas()
+    {
+        JogadorNetwork[] todos = Object.FindObjectsByType<JogadorNetwork>(FindObjectsSortMode.None);
+        foreach (var jogador in todos)
         {
-            if (jogador != this)
+            if (!jogador.IsOwner)
             {
-                Collider colliderAdversario = jogador.GetComponent<Collider>();
-                if (colliderAdversario != null)
-                {
-                    Physics.IgnoreCollision(meuCollider, colliderAdversario, true);
-                }
+                jogador.AplicarEfeitoFantasma();
             }
         }
     }
@@ -173,9 +188,39 @@ public class JogadorNetwork : NetworkBehaviour
         }
     }
 
+    private void OnTriggerEnter(Collider outro)
+    {
+        if (!IsOwner) return;
+
+        if (outro.CompareTag("Checkpoint"))
+        {
+            pontoCheckpointAtual = outro.transform.position;
+            Debug.Log("Novo Checkpoint Alcançado!");
+        }
+    }
+
+    private void ZerarVelocidade()
+    {
+        if (rb != null && !rb.isKinematic)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
+
     private void Morrer()
     {
-        Debug.Log("O jogador morreu no Multiplayer!");
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        ZerarVelocidade();
+
+        if (TryGetComponent<NetworkTransform>(out var netTransform))
+        {
+            netTransform.Teleport(pontoCheckpointAtual, Quaternion.identity, transform.localScale);
+        }
+        else
+        {
+            transform.position = pontoCheckpointAtual;
+        }
+
+        DefinirCorJogador(true);
     }
 }
