@@ -39,9 +39,11 @@ public class GeradorPlataformas : NetworkBehaviour
     private int plataformasIniciaisSeguras = 5;
     private bool ultimoObstaculoExigiuPulo = false;
 
+    private bool ModoRedeAtivo => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
     private void Start()
     {
-        if (NetworkManager.Singleton == null)
+        if (!ModoRedeAtivo)
         {
             InicializarGerador();
         }
@@ -65,7 +67,7 @@ public class GeradorPlataformas : NetworkBehaviour
 
     private void Update()
     {
-        if (NetworkManager.Singleton != null && !IsServer) return;
+        if (ModoRedeAtivo && !IsServer) return;
 
         BuscarJogadorLider();
 
@@ -228,7 +230,7 @@ public class GeradorPlataformas : NetworkBehaviour
 
                 if (plataformaAntiga.TryGetComponent<NetworkObject>(out var netObj))
                 {
-                    if (NetworkManager.Singleton != null && IsServer && netObj.IsSpawned)
+                    if (ModoRedeAtivo && IsServer && netObj.IsSpawned)
                     {
                         netObj.Despawn(true);
                         return;
@@ -244,7 +246,7 @@ public class GeradorPlataformas : NetworkBehaviour
     {
         if (obj.TryGetComponent<NetworkObject>(out var netObj))
         {
-            if (NetworkManager.Singleton != null && IsServer && !netObj.IsSpawned)
+            if (ModoRedeAtivo && IsServer && !netObj.IsSpawned)
             {
                 netObj.Spawn(true);
             }

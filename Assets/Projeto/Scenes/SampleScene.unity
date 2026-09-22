@@ -251,7 +251,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -23.747198, y: 2.5, z: -10}
+  m_LocalPosition: {x: 2.0528007, y: 2.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -636,7 +636,7 @@ Transform:
   m_GameObject: {fileID: 1700054941}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -23.747198, y: 2.5, z: -10}
+  m_LocalPosition: {x: 2.0528007, y: 2.5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -717,6 +717,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fed02405b64d1214e91cc9aa0322cbbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GeradorPlataformas
+  ShowTopMostFoldoutHeaderGroup: 1
   prefabChaoNeutro: {fileID: 1372339484774170106, guid: 66f61d3cf745fd34cbb7eccba34c5df1, type: 3}
   corA: {r: 0, g: 1, b: 1, a: 1}
   corB: {r: 1, g: 0, b: 0, a: 1}
@@ -751,7 +752,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6298730529517314200, guid: 2708a0d0ee2ee3c4c88136905c175789, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -25.8
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6298730529517314200, guid: 2708a0d0ee2ee3c4c88136905c175789, type: 3}
       propertyPath: m_LocalPosition.y
