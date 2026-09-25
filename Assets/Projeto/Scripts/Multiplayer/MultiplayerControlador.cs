@@ -36,10 +36,10 @@ public class MultiplayerControlador : MonoBehaviour
 
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        NetworkManager.Singleton.OnTransportFailure += OnTransportFailure;
 
         Inicializar();
     }
-
 
     private async void Inicializar()
     {
@@ -245,8 +245,17 @@ public class MultiplayerControlador : MonoBehaviour
             return;
         }
 
-        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
-        PlayerPrefs.Save();
+        if (!servicesProntos)
+        {
+            Debug.LogError("[Relay] Unity Services ainda não está pronto!");
+            return;
+        }
+
+        if (NetworkManager.Singleton.IsListening)
+        {
+            Debug.LogWarning("[Relay] NetworkManager já está ouvindo.");
+            return;
+        }
 
         string codigoDigitado =
             inputIP != null
@@ -259,39 +268,24 @@ public class MultiplayerControlador : MonoBehaviour
             return;
         }
 
-        Debug.Log(
-            $"[Relay] Tentando entrar com Join Code: {codigoDigitado}"
-        );
-
-        if (NetworkManager.Singleton.IsListening)
-        {
-            Debug.LogWarning(
-                "[Relay] NetworkManager já está conectado/ouvindo."
-            );
-            return;
-        }
+        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
+        PlayerPrefs.Save();
 
         try
         {
-            Debug.Log("[Relay] Entrando na alocação...");
+            Debug.Log($"[Relay] Tentando entrar com Join Code: {codigoDigitado}");
 
             JoinAllocation alocacaoEntrada =
-                await RelayService.Instance.JoinAllocationAsync(
-                    codigoDigitado
-                );
+                await RelayService.Instance.JoinAllocationAsync(codigoDigitado);
 
-            Debug.Log(
-                "[Relay] JoinAllocation recebido com sucesso!"
-            );
+            Debug.Log("[Relay] JoinAllocation recebido com sucesso!");
 
             UnityTransport transport =
                 NetworkManager.Singleton.GetComponent<UnityTransport>();
 
             if (transport == null)
             {
-                Debug.LogError(
-                    "[Relay] UnityTransport não encontrado!"
-                );
+                Debug.LogError("[Relay] UnityTransport não encontrado!");
                 return;
             }
 
@@ -303,34 +297,23 @@ public class MultiplayerControlador : MonoBehaviour
 
             transport.SetRelayServerData(relayData);
 
-            Debug.Log(
-                "[Relay] UnityTransport configurado para Client."
-            );
+            Debug.Log("[Relay] UnityTransport configurado para Client.");
+            Debug.Log("[Relay] Iniciando NetworkManager como Client...");
 
-            bool iniciou =
-                NetworkManager.Singleton.StartClient();
+            bool iniciou = NetworkManager.Singleton.StartClient();
 
-            Debug.Log(
-                $"[Netcode] StartClient retornou: {iniciou}"
-            );
+            Debug.Log($"[Netcode] StartClient retornou: {iniciou}");
 
             if (!iniciou)
             {
-                Debug.LogError(
-                    "[Netcode] StartClient() falhou!"
-                );
+                Debug.LogError("[Netcode] StartClient() falhou!");
                 return;
             }
 
             Debug.Log(
                 "[Relay] CLIENT iniciado. " +
-                "Aguardando conexão com o Host..."
+                "Aguardando conexão REAL com o Host..."
             );
-
-            // NÃO carregue CenaModoInfinito aqui.
-            //
-            // Quando o cliente realmente conectar,
-            // o Host enviará a cena através do NetworkSceneManager.
         }
         catch (RelayServiceException e)
         {
@@ -345,5 +328,25 @@ public class MultiplayerControlador : MonoBehaviour
             );
         }
     }
+    private void OnTransportFailure()
+    {
+        Debug.LogError(
+            "[TRANSPORT] FALHA NO TRANSPORTE! " +
+            "O UnityTransport não conseguiu estabelecer/manter a conexão."
+        );
 
+        if (NetworkManager.Singleton != null)
+        {
+            Debug.LogError(
+                $"[TRANSPORT] IsClient={NetworkManager.Singleton.IsClient} | " +
+                $"IsHost={NetworkManager.Singleton.IsHost} | " +
+                $"IsListening={NetworkManager.Singleton.IsListening}"
+            );
+
+            Debug.LogError(
+                $"[TRANSPORT] DisconnectReason=" +
+                $"{NetworkManager.Singleton.DisconnectReason}"
+            );
+        }
+    }
 }
