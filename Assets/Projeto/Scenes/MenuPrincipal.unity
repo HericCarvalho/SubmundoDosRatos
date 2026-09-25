@@ -483,7 +483,7 @@ MonoBehaviour:
     RecycleNetworkIds: 1
     NetworkIdRecycleDelay: 120
     RpcHashSize: 0
-    LoadSceneTimeOut: 120
+    LoadSceneTimeOut: 200
     SpawnTimeout: 10
     EnableNetworkLogs: 1
     NetworkTopology: 0

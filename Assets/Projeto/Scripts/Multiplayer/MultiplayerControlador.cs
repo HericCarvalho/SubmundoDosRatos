@@ -28,17 +28,18 @@ public class MultiplayerControlador : MonoBehaviour
 
     private void Start()
     {
+        if (NetworkManager.Singleton == null)
+        {
+            Debug.LogError("[NETCODE] NetworkManager não encontrado!");
+            return;
+        }
+
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
-        if (NetworkManager.Singleton.SceneManager != null)
-        {
-            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted +=
-                OnNetworkSceneLoaded;
-        }
-
         Inicializar();
     }
+
 
     private async void Inicializar()
     {
@@ -69,41 +70,20 @@ public class MultiplayerControlador : MonoBehaviour
     }
     private void OnClientConnected(ulong clientId)
     {
-        Debug.Log(
-            $"[NETCODE] ========================================\n" +
-            $"[NETCODE] CLIENTE CONECTADO!\n" +
-            $"[NETCODE] ClientId: {clientId}\n" +
-            $"[NETCODE] IsClient: {NetworkManager.Singleton.IsClient}\n" +
-            $"[NETCODE] IsConnectedClient: {NetworkManager.Singleton.IsConnectedClient}\n" +
-            $"[NETCODE] IsHost: {NetworkManager.Singleton.IsHost}\n" +
-            $"[NETCODE] IsServer: {NetworkManager.Singleton.IsServer}\n" +
-            $"[NETCODE] Cena atual: {SceneManager.GetActiveScene().name}\n" +
-            $"[NETCODE] ========================================"
-        );
+        Debug.Log($"[NETCODE] CLIENTE CONECTOU! ID={clientId}");
 
-        if (NetworkManager.Singleton.IsClient &&
-            !NetworkManager.Singleton.IsHost)
-        {
-            Debug.Log("[NETCODE] Cliente conectado ao Host. Aguardando sincronização da cena...");
-        }
+        // NÃO carregue cena aqui.
+        // O Host já controla a troca de cena.
     }
 
     private void OnClientDisconnected(ulong clientId)
     {
-        string motivo = NetworkManager.Singleton != null
-            ? NetworkManager.Singleton.DisconnectReason
-            : "NetworkManager inexistente";
-
         Debug.LogError(
-            $"[NETCODE] ========================================\n" +
-            $"[NETCODE] CLIENTE DESCONECTADO!\n" +
-            $"[NETCODE] ClientId: {clientId}\n" +
-            $"[NETCODE] Motivo: {motivo}\n" +
-            $"[NETCODE] IsClient: {NetworkManager.Singleton?.IsClient}\n" +
-            $"[NETCODE] IsListening: {NetworkManager.Singleton?.IsListening}\n" +
-            $"[NETCODE] ========================================"
+            $"[NETCODE] CLIENTE DESCONECTOU! ID={clientId} | " +
+            $"Motivo: {NetworkManager.Singleton.DisconnectReason}"
         );
     }
+
     private void OnEnable()
     {
         if (uiDocument == null) uiDocument = GetComponent<UIDocument>();
@@ -290,8 +270,6 @@ public class MultiplayerControlador : MonoBehaviour
             return;
         }
 
-        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
-
         string codigoDigitado = inputIP != null
             ? inputIP.value.Trim().ToUpperInvariant()
             : "";
@@ -302,40 +280,24 @@ public class MultiplayerControlador : MonoBehaviour
             return;
         }
 
-        Debug.Log(
-            $"[Relay] Tentando entrar com Join Code: {codigoDigitado}"
-        );
-
         if (NetworkManager.Singleton.IsListening)
         {
-            Debug.LogWarning(
-                $"[Relay] NetworkManager já está ouvindo.\n" +
-                $"IsHost: {NetworkManager.Singleton.IsHost}\n" +
-                $"IsClient: {NetworkManager.Singleton.IsClient}\n" +
-                $"IsServer: {NetworkManager.Singleton.IsServer}"
-            );
-
+            Debug.LogWarning("[Netcode] Já existe uma conexão ativa.");
             return;
         }
 
         try
         {
-            // =========================================================
-            // 1. ENTRAR NO RELAY
-            // =========================================================
+            Debug.Log(
+                $"[Relay] Entrando no Relay com código: {codigoDigitado}"
+            );
 
-            JoinAllocation alocacaoEntrada =
+            JoinAllocation alocacao =
                 await RelayService.Instance.JoinAllocationAsync(
                     codigoDigitado
                 );
 
-            Debug.Log(
-                "[Relay] JoinAllocation recebido com sucesso!"
-            );
-
-            // =========================================================
-            // 2. PEGAR UNITY TRANSPORT
-            // =========================================================
+            Debug.Log("[Relay] JoinAllocation recebido.");
 
             UnityTransport transport =
                 NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -345,17 +307,12 @@ public class MultiplayerControlador : MonoBehaviour
                 Debug.LogError(
                     "[Relay] UnityTransport não encontrado!"
                 );
-
                 return;
             }
 
-            // =========================================================
-            // 3. CONFIGURAR RELAY
-            // =========================================================
-
             RelayServerData relayData =
                 AllocationUtils.ToRelayServerData(
-                    alocacaoEntrada,
+                    alocacao,
                     "dtls"
                 );
 
@@ -365,56 +322,25 @@ public class MultiplayerControlador : MonoBehaviour
                 "[Relay] UnityTransport configurado para Client."
             );
 
-            // =========================================================
-            // 4. INICIAR CLIENT
-            // =========================================================
-
             bool iniciou =
                 NetworkManager.Singleton.StartClient();
 
             Debug.Log(
-                $"[Netcode] StartClient retornou: {iniciou}"
-            );
-
-            Debug.Log(
-                $"[Netcode] IsClient: " +
-                $"{NetworkManager.Singleton.IsClient}"
-            );
-
-            Debug.Log(
-                $"[Netcode] IsListening: " +
-                $"{NetworkManager.Singleton.IsListening}"
+                $"[NETCODE] StartClient = {iniciou}"
             );
 
             if (!iniciou)
             {
                 Debug.LogError(
-                    "[Netcode] StartClient() falhou!"
+                    "[NETCODE] Não foi possível iniciar o Client."
                 );
-
                 return;
             }
 
             Debug.Log(
-                "[Relay] CLIENT iniciado. " +
-                "Aguardando conexão real com o Host..."
+                "[NETCODE] Client iniciado. " +
+                "Aguardando conexão com o Host..."
             );
-
-            // =========================================================
-            // 5. NÃO TROQUE A CENA AQUI
-            // =========================================================
-
-            // IMPORTANTE:
-            // O cliente NÃO deve chamar LoadScene.
-            //
-            // Quem manda a cena é o Host através do
-            // NetworkSceneManager.
-            //
-            // Portanto não coloque:
-            //
-            // SceneManager.LoadScene(...)
-            //
-            // aqui.
         }
         catch (RelayServiceException e)
         {
@@ -425,24 +351,9 @@ public class MultiplayerControlador : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError(
-                $"[Netcode] Erro inesperado:\n{e}"
+                $"[NETCODE] Erro:\n{e}"
             );
         }
-    }
-    private void OnNetworkSceneLoaded(
-    string sceneName,
-    LoadSceneMode loadSceneMode,
-    List<ulong> clientsCompleted,
-    List<ulong> clientsTimedOut)
-    {
-        Debug.Log(
-            $"[NETCODE] ========================================\n" +
-            $"[NETCODE] CENA CARREGADA PELA REDE\n" +
-            $"[NETCODE] Cena: {sceneName}\n" +
-            $"[NETCODE] Clientes concluíram: {clientsCompleted.Count}\n" +
-            $"[NETCODE] Clientes timeout: {clientsTimedOut.Count}\n" +
-            $"[NETCODE] ========================================"
-        );
     }
 
 }
