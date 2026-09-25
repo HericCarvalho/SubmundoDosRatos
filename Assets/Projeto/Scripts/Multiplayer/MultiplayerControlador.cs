@@ -25,7 +25,15 @@ public class MultiplayerControlador : MonoBehaviour
     private Button btnCriar;
     private Button btnEntrar;
 
-    private async void Start()
+    private void Start()
+    {
+        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+
+        Inicializar();
+    }
+
+    private async void Inicializar()
     {
         try
         {
@@ -34,14 +42,26 @@ public class MultiplayerControlador : MonoBehaviour
             if (!AuthenticationService.Instance.IsSignedIn)
             {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                Debug.Log($"[Relay] Autenticado com sucesso! PlayerID: {AuthenticationService.Instance.PlayerId}");
             }
+
+            Debug.Log("[Relay] Unity Services inicializado.");
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[Relay] Erro na autenticação do Unity Services: {e.Message}");
+            Debug.LogError($"[Relay] Erro ao inicializar: {e}");
         }
     }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"[Netcode] CLIENTE CONECTADO! ClientId = {clientId}");
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        Debug.LogError($"[Netcode] CLIENTE DESCONECTADO! ClientId = {clientId}");
+    }
+
 
     private void OnEnable()
     {
@@ -228,6 +248,10 @@ public class MultiplayerControlador : MonoBehaviour
 
             // 3. Iniciar o cliente
             bool iniciou = NetworkManager.Singleton.StartClient();
+
+            Debug.Log($"[Netcode] StartClient retornou: {iniciou}");
+            Debug.Log($"[Netcode] IsClient: {NetworkManager.Singleton.IsClient}");
+            Debug.Log($"[Netcode] IsListening: {NetworkManager.Singleton.IsListening}");
 
             if (!iniciou)
             {
