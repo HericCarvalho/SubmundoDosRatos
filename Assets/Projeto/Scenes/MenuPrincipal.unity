@@ -443,7 +443,7 @@ MonoBehaviour:
   m_DisconnectTimeoutMS: 30000
   ConnectionData:
     Address: 172.17.11.18
-    Port: 8080
+    Port: 7777
     WebSocketPath: /
     ServerListenAddress: 0.0.0.0
     ClientBindPort: 0
