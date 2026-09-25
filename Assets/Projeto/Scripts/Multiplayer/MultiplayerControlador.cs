@@ -76,82 +76,182 @@ public class MultiplayerControlador : MonoBehaviour
     {
         if (NetworkManager.Singleton == null)
         {
-            Debug.LogError("NetworkManager não encontrado na cena!");
+            Debug.LogError("[Relay] NetworkManager não encontrado na cena!");
             return;
         }
 
         if (NetworkManager.Singleton.IsListening)
         {
-            NetworkManager.Singleton.Shutdown();
-        }
+            Debug.LogWarning(
+                "[Relay] O NetworkManager já está em execução. " +
+                "Não é possível criar outro Host."
+            );
 
-        try
-        {
-            Allocation alocacao = await RelayService.Instance.CreateAllocationAsync(2);
-
-            string codigoEntrada = await RelayService.Instance.GetJoinCodeAsync(alocacao.AllocationId);
-
-            Debug.Log($"[Relay] CÓDIGO DA SALA GERADO: {codigoEntrada}");
-
-            if (inputPort != null)
-            {
-                inputPort.value = codigoEntrada;
-            }
-
-            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-            if (transport != null)
-            {
-                RelayServerData relayData = AllocationUtils.ToRelayServerData(alocacao, "dtls");
-                transport.SetRelayServerData(relayData);
-            }
-
-            bool hostIniciadoComSucesso = NetworkManager.Singleton.StartHost();
-
-            if (hostIniciadoComSucesso)
-            {
-                NetworkManager.Singleton.SceneManager.LoadScene(nomeCenaGameplay, LoadSceneMode.Single);
-            }
-            else
-            {
-                Debug.LogError("Falha ao iniciar o Host.");
-            }
-        }
-        catch (RelayServiceException e)
-        {
-            Debug.LogError($"[Relay] Erro ao criar sala no Relay: {e.Message}");
-        }
-    }
-
-    private async Task EntrarComoCliente()
-    {
-        if (NetworkManager.Singleton == null) return;
-
-        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
-
-        string codigoDigitado = inputIP != null ? inputIP.value.Trim() : "";
-
-        if (string.IsNullOrEmpty(codigoDigitado))
-        {
-            Debug.LogWarning("Por favor, digite o código da sala no campo IP.");
             return;
         }
 
         try
         {
-            JoinAllocation alocacaoEntrada = await RelayService.Instance.JoinAllocationAsync(codigoDigitado);
+            // Criar a alocação no Relay
+            Allocation alocacao =
+                await RelayService.Instance.CreateAllocationAsync(2);
 
-            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-            if (transport != null)
+            // Gerar o código que será enviado ao outro jogador
+            string codigoEntrada =
+                await RelayService.Instance.GetJoinCodeAsync(
+                    alocacao.AllocationId
+                );
+
+            Debug.Log(
+                $"[Relay] CÓDIGO DA SALA GERADO: {codigoEntrada}"
+            );
+
+            // Mostra o Join Code na UI
+            if (inputPort != null)
             {
-                RelayServerData relayData = AllocationUtils.ToRelayServerData(alocacaoEntrada, "dtls");
-                transport.SetRelayServerData(relayData);
+                inputPort.value = codigoEntrada;
             }
 
-            NetworkManager.Singleton.StartClient();
+            // Configurar UnityTransport
+            UnityTransport transport =
+                NetworkManager.Singleton.GetComponent<UnityTransport>();
+
+            if (transport == null)
+            {
+                Debug.LogError(
+                    "[Relay] UnityTransport não encontrado no NetworkManager!"
+                );
+
+                return;
+            }
+
+            RelayServerData relayData =
+                AllocationUtils.ToRelayServerData(alocacao, "dtls");
+
+            transport.SetRelayServerData(relayData);
+
+            Debug.Log("[Relay] UnityTransport configurado para Host.");
+
+            // Iniciar Host
+            bool iniciou =
+                NetworkManager.Singleton.StartHost();
+
+            if (!iniciou)
+            {
+                Debug.LogError("[Relay] Falha ao iniciar o Host.");
+                return;
+            }
+
+            Debug.Log("[Relay] Host iniciado com sucesso!");
+
+            // Carregar a cena pelo NetworkManager
+            NetworkManager.Singleton.SceneManager.LoadScene(
+                nomeCenaGameplay,
+                LoadSceneMode.Single
+            );
         }
         catch (RelayServiceException e)
         {
-            Debug.LogError($"[Relay] Não foi possível conectar com o código informado: {e.Message}");
+            Debug.LogError(
+                $"[Relay] Erro ao criar sala:\n{e}"
+            );
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError(
+                $"[Netcode] Erro inesperado:\n{e}"
+            );
+        }
+    }
+
+    private async Task EntrarComoCliente()
+    {
+        if (NetworkManager.Singleton == null)
+        {
+            Debug.LogError("[Relay] NetworkManager não encontrado!");
+            return;
+        }
+
+        PlayerPrefs.SetString("ModoJogoAtual", "Multiplayer");
+
+        // Esse campo deve conter o JOIN CODE do Relay.
+        string codigoDigitado = inputIP != null
+            ? inputIP.value.Trim().ToUpperInvariant()
+            : "";
+
+        if (string.IsNullOrEmpty(codigoDigitado))
+        {
+            Debug.LogWarning("[Relay] Digite o código da sala.");
+            return;
+        }
+
+        Debug.Log($"[Relay] Tentando entrar com Join Code: {codigoDigitado}");
+
+        // Não tente iniciar outro cliente/host se já existe
+        // uma sessão de Netcode ativa.
+        if (NetworkManager.Singleton.IsListening)
+        {
+            Debug.LogWarning(
+                $"[Relay] NetworkManager já está ouvindo. " +
+                $"IsHost={NetworkManager.Singleton.IsHost}, " +
+                $"IsClient={NetworkManager.Singleton.IsClient}, " +
+                $"IsServer={NetworkManager.Singleton.IsServer}"
+            );
+
+            return;
+        }
+
+        try
+        {
+            // 1. Entrar na alocação do Relay
+            JoinAllocation alocacaoEntrada =
+                await RelayService.Instance.JoinAllocationAsync(codigoDigitado);
+
+            Debug.Log("[Relay] JoinAllocation recebido com sucesso.");
+
+            // 2. Configurar o UnityTransport
+            UnityTransport transport =
+                NetworkManager.Singleton.GetComponent<UnityTransport>();
+
+            if (transport == null)
+            {
+                Debug.LogError("[Relay] UnityTransport não encontrado no NetworkManager!");
+                return;
+            }
+
+            RelayServerData relayData =
+                AllocationUtils.ToRelayServerData(alocacaoEntrada, "dtls");
+
+            transport.SetRelayServerData(relayData);
+
+            Debug.Log("[Relay] UnityTransport configurado.");
+
+            // 3. Iniciar o cliente
+            bool iniciou = NetworkManager.Singleton.StartClient();
+
+            if (!iniciou)
+            {
+                Debug.LogError(
+                    $"[Relay] StartClient() falhou. " +
+                    $"IsListening={NetworkManager.Singleton.IsListening}"
+                );
+
+                return;
+            }
+
+            Debug.Log("[Relay] Cliente iniciado com sucesso.");
+        }
+        catch (RelayServiceException e)
+        {
+            Debug.LogError(
+                $"[Relay] Erro ao entrar na sala:\n{e}"
+            );
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError(
+                $"[Netcode] Erro inesperado ao iniciar cliente:\n{e}"
+            );
         }
     }
 }

@@ -443,9 +443,9 @@ MonoBehaviour:
   m_DisconnectTimeoutMS: 30000
   ConnectionData:
     Address: 172.17.11.18
-    Port: 0
+    Port: 8080
     WebSocketPath: /
-    ServerListenAddress: 172.17.11.18
+    ServerListenAddress: 0.0.0.0
     ClientBindPort: 0
   DebugSimulator:
     PacketDelayMS: 0
@@ -493,7 +493,7 @@ MonoBehaviour:
     NetworkProfilingMetrics: 1
     OldPrefabList: []
   RunInBackground: 1
-  LogLevel: 1
+  LogLevel: 0
 --- !u!4 &1293161687
 Transform:
   m_ObjectHideFlags: 0
